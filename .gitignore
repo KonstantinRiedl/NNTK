@@ -21,3 +21,6 @@ Thumbs.db
 # Editors
 .vscode/
 .idea/
+
+# Local-only files
+deprecated/
