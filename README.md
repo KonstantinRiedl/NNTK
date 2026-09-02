@@ -5,9 +5,9 @@ Networks in the Overparameterized Limit"** by Konstantin Riedl, Konstantinos Spi
 Justin Sirignano.
 
 The paper analyzes the regularized Newton method for training overparameterized shallow neural
-networks and shows that, unlike gradient descent, its convergence rate is uniform across the
-frequency spectrum of the target function. This repository contains the numerical experiments
-behind all of the paper's figures:
+networks in the NTK regime and shows that, unlike gradient descent, its convergence rate is
+uniform across the frequency spectrum of the target function. This repository contains the
+numerical experiments behind all of the paper's figures:
 
 - **Figures 1 and 2** — the NTK/NNTK eigenvalue spectrum and finite-width-to-infinite-width
   convergence sweep illustrating Remarks 5–6, Lemma 9, and Theorem 7 (`Notebook_NNTK.ipynb`).
