@@ -13,8 +13,8 @@ numerical experiments behind all of the paper's figures:
   convergence sweep illustrating Remarks 5–6, Lemma 9, and Theorem 7 (`Notebook_NNTK.ipynb`).
 - **Figures 3 and 5** — training gradient descent, Adam, the regularized Gauss–Newton method,
   and the regularized Newton method on a synthetic target with both low- and high-frequency
-  components, comparing loss decay and per-frequency convergence (`run_experiment.py`,
-  `Notebook_TrainingComparison.ipynb`).
+  components, comparing loss decay and per-frequency convergence
+  (`Notebook_TrainingComparison.ipynb`).
 
 ## What it does
 
@@ -44,8 +44,7 @@ numerical experiments behind all of the paper's figures:
 | `training.py` | Training loop, learning-rate tuning, multi-seed aggregation |
 | `plotting.py` | Figure generation (loss curves, per-component/NTK-mode error, animations) |
 | `Notebook_NNTK.ipynb` | NTK/NNTK eigenvalue spectrum and finite-width convergence sweep producing Figures 1 and 2 |
-| `run_experiment.py` | End-to-end driver script producing Figures 3 and 5 |
-| `Notebook_TrainingComparison.ipynb` | Interactive, cell-by-cell walkthrough of the same pipeline |
+| `Notebook_TrainingComparison.ipynb` | End-to-end training comparison pipeline producing Figures 3 and 5 |
 
 ## Setup
 
@@ -71,15 +70,9 @@ but correspondingly slow to run end-to-end; reduce `Ns`, `gammas`, or `n_trials`
 
 ### Figures 3 and 5 — training comparison
 
-```bash
-python run_experiment.py
-```
-
-This tunes the gradient descent and Adam learning rates, runs all four optimizers across
-`cfg.n_runs` random seeds, and writes the resulting figures to `Figures/NNTK/`.
-
-Alternatively, open `Notebook_TrainingComparison.ipynb` for an interactive, annotated version of
-the same pipeline.
+Open `Notebook_TrainingComparison.ipynb` and run all cells. It tunes the gradient descent and
+Adam learning rates, runs all four optimizers across `cfg.n_runs` random seeds, and writes the
+resulting figures to `Figures/NNTK/`.
 
 All experiment parameters (network width, number of neurons, target-function frequencies,
 number of runs, etc.) live in `config.py`'s `ExperimentConfig`. By default `n_runs = 10` for
