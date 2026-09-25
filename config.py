@@ -11,7 +11,7 @@ class ExperimentConfig:
     freeze_first_layer: bool = False
 
     n_points: int = 128
-    epochs: int = 5000
+    epochs: int = 10000
     adam_epochs: Optional[int] = None  # defaults to 10 * epochs
     gd_epochs: Optional[int] = None  # defaults to 10 * epochs
 

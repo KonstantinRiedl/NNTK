@@ -7,8 +7,8 @@ from linear_algebra import (
     conjugate_gradient,
     diagonal_GN_preconditioner,
     diagonal_Hessian_preconditioner,
-    gnvp_explicit,
-    hvp_explicit,
+    make_gnvp,
+    make_hvp,
 )
 from model import flatten, unflatten
 
@@ -159,9 +159,13 @@ class GaussNewtonOptimizer(Optimizer):
         damping = self.param_groups[0]["damping"]
         self.timers["overhead"] += time.perf_counter() - t0
 
+        t = time.perf_counter()
+        gnvp = make_gnvp(model, x)
+        self.timers["gnvp_total"] += time.perf_counter() - t
+
         def GNVP_solver(v):
             t = time.perf_counter()
-            out = _trainable_flatten(model, gnvp_explicit(model, x, unflatten(v, model)))
+            out = _trainable_flatten(model, gnvp(unflatten(v, model)))
             self.timers["gnvp_total"] += time.perf_counter() - t
             return out
 
@@ -255,9 +259,13 @@ class NewtonOptimizer(Optimizer):
         damping = self.param_groups[0]["damping"]
         self.timers["overhead"] += time.perf_counter() - t0
 
+        t = time.perf_counter()
+        hvp = make_hvp(model, x, y)
+        self.timers["hvp_total"] += time.perf_counter() - t
+
         def HVP_solver(v):
             t = time.perf_counter()
-            out = _trainable_flatten(model, hvp_explicit(model, x, y, unflatten(v, model)))
+            out = _trainable_flatten(model, hvp(unflatten(v, model)))
             self.timers["hvp_total"] += time.perf_counter() - t
             return out
 

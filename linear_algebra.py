@@ -14,7 +14,10 @@ def _trainable_entries(v, model):
     return torch.cat(parts)
 
 
-def hvp_explicit(model, x, y, v_dict):
+def make_hvp(model, x, y):
+    # Returns v_dict -> (H_W1, H_b1, H_W2). The v-independent quantities are
+    # computed once here, so the closure is only valid while the parameters
+    # stay unchanged (i.e. within one Newton step).
     B = x.size(0)
     n = model.hidden_dim
     scaling = 1.0 / (n ** model.beta)
@@ -22,10 +25,6 @@ def hvp_explicit(model, x, y, v_dict):
     W1 = model.fc1.weight.detach()
     b1 = model.fc1.bias.detach()
     W2 = model.fc2.weight.detach()
-
-    v_W1 = v_dict["fc1.weight"]
-    v_b1 = v_dict["fc1.bias"]
-    v_W2 = v_dict["fc2.weight"]
 
     z1 = x @ W1.T + b1
     a1 = torch.tanh(z1)
@@ -34,23 +33,32 @@ def hvp_explicit(model, x, y, v_dict):
     g_u = (u - y) / B
     g_tilde_u = scaling * g_u
     tanh_p = 1.0 - a1**2
-
-    R_z1 = x @ v_W1.T + v_b1
-    R_a1 = tanh_p * R_z1
-    R_u = scaling * (a1 @ v_W2.T + R_a1 @ W2.T)
-
-    R_g_tilde_u = scaling * (R_u / B)
     tanh_pp = -2.0 * a1 * tanh_p
-    R_delta1 = (R_g_tilde_u @ W2) * tanh_p + (g_tilde_u @ v_W2) * tanh_p + (g_tilde_u @ W2) * tanh_pp * R_z1
+    g_W2_tanh_pp = (g_tilde_u @ W2) * tanh_pp
 
-    H_W1 = R_delta1.T @ x
-    H_b1 = R_delta1.sum(dim=0)
-    H_W2 = R_g_tilde_u.T @ a1 + g_tilde_u.T @ R_a1
+    def hvp(v_dict):
+        v_W1 = v_dict["fc1.weight"]
+        v_b1 = v_dict["fc1.bias"]
+        v_W2 = v_dict["fc2.weight"]
 
-    return H_W1, H_b1, H_W2
+        R_z1 = x @ v_W1.T + v_b1
+        R_a1 = tanh_p * R_z1
+        R_u = scaling * (a1 @ v_W2.T + R_a1 @ W2.T)
+
+        R_g_tilde_u = scaling * (R_u / B)
+        R_delta1 = (R_g_tilde_u @ W2 + g_tilde_u @ v_W2) * tanh_p + g_W2_tanh_pp * R_z1
+
+        H_W1 = R_delta1.T @ x
+        H_b1 = R_delta1.sum(dim=0)
+        H_W2 = R_g_tilde_u.T @ a1 + g_tilde_u.T @ R_a1
+
+        return H_W1, H_b1, H_W2
+
+    return hvp
 
 
-def gnvp_explicit(model, x, v_dict):
+def make_gnvp(model, x):
+    # Returns v_dict -> (GN_W1, GN_b1, GN_W2); same caching caveat as make_hvp.
     B = x.size(0)
     n = model.hidden_dim
     scaling = 1.0 / (n ** model.beta)
@@ -59,27 +67,30 @@ def gnvp_explicit(model, x, v_dict):
     b1 = model.fc1.bias.detach()
     W2 = model.fc2.weight.detach()
 
-    v_W1 = v_dict["fc1.weight"]
-    v_b1 = v_dict["fc1.bias"]
-    v_W2 = v_dict["fc2.weight"]
-
     z1 = x @ W1.T + b1
     a1 = torch.tanh(z1)
     tanh_p = 1.0 - a1**2
 
-    R_z1 = x @ v_W1.T + v_b1
-    R_a1 = tanh_p * R_z1
+    def gnvp(v_dict):
+        v_W1 = v_dict["fc1.weight"]
+        v_b1 = v_dict["fc1.bias"]
+        v_W2 = v_dict["fc2.weight"]
 
-    R_u = scaling * (a1 @ v_W2.T + R_a1 @ W2.T)
+        R_z1 = x @ v_W1.T + v_b1
+        R_a1 = tanh_p * R_z1
 
-    g_gn = scaling * (R_u / B)
-    delta1_gn = (g_gn @ W2) * tanh_p
+        R_u = scaling * (a1 @ v_W2.T + R_a1 @ W2.T)
 
-    GN_W1 = delta1_gn.T @ x
-    GN_b1 = delta1_gn.sum(dim=0)
-    GN_W2 = g_gn.T @ a1
+        g_gn = scaling * (R_u / B)
+        delta1_gn = (g_gn @ W2) * tanh_p
 
-    return GN_W1, GN_b1, GN_W2
+        GN_W1 = delta1_gn.T @ x
+        GN_b1 = delta1_gn.sum(dim=0)
+        GN_W2 = g_gn.T @ a1
+
+        return GN_W1, GN_b1, GN_W2
+
+    return gnvp
 
 
 def conjugate_gradient(HVP_callable, b, adaptive_damping, max_iter=10, tol=1e-4, p0=None, preconditioner=None):
